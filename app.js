@@ -1,6 +1,7 @@
-const STORAGE_KEY = "couplee_app_state_v1";
+const VERSION = "3.0.0";
+const STORAGE_KEY = "couplee_complete_state_v3";
 
-const dailyQuestions = [
+const questions = [
   "ふたりで今年中に行きたい場所はどこ？",
   "最近、相手にしてもらって嬉しかったことは？",
   "今週、ふたりの時間を10分増やすなら何をしたい？",
@@ -10,7 +11,17 @@ const dailyQuestions = [
   "相手の好きなところをひとつだけ言うなら？",
   "ふたりの関係で、今月大切にしたいことは？",
   "忙しい日にされると助かることは？",
-  "次の記念日に残したい思い出は？"
+  "次の記念日に残したい思い出は？",
+  "言いづらいけれど、本当はお願いしたいことは？",
+  "一緒に暮らすなら、先に決めておきたいルールは？"
+];
+
+const dateIdeas = [
+  ["週末カフェ巡り", "近場で90分だけ。会話を増やす軽いデート。", "☕"],
+  ["思い出アルバム整理", "写真を3枚選んで、その日の気持ちを残す。", "📷"],
+  ["夜の散歩", "スマホをしまって15分だけ歩く。", "🌙"],
+  ["サプライズ小物", "高価な物より、相手が最近欲しがっていた小物を。", "🎁"],
+  ["次の旅行会議", "行き先・予算・時期だけ先に決める。", "✈️"]
 ];
 
 const defaultState = () => {
@@ -18,1089 +29,388 @@ const defaultState = () => {
   const start = new Date(today);
   start.setFullYear(today.getFullYear() - 2);
   start.setMonth(today.getMonth() - 1);
-  const nextAnniv = nextYearlyDate(start.toISOString().slice(0, 10));
-
+  const startKey = toKey(start);
   return {
+    meta: { version: VERSION, createdAt: nowIso(), updatedAt: nowIso() },
     profile: {
       isReady: false,
       appName: "Couplee",
       personA: "ゆうか",
       personB: "こうた",
-      startDate: start.toISOString().slice(0, 10),
+      avatarA: "👩🏻",
+      avatarB: "👨🏻",
+      startDate: startKey,
       anniversaryName: "交際記念日",
       phase: "遠距離",
       isLongDistance: true,
-      language: "ja"
+      coupleGoal: "毎日少しだけ会話する",
+      reminderDays: [30, 7, 1]
     },
     points: 32540,
     streak: 28,
     bestStreak: 45,
+    lastVisit: todayKey(),
+    companion: { name: "ラビ", emoji: "🐰", exp: 68 },
     daily: {
       date: todayKey(),
-      questionIndex: today.getDate() % dailyQuestions.length,
+      questionIndex: new Date().getDate() % questions.length,
       answerA: "",
       answerB: "",
-      revealed: false
+      revealed: false,
+      history: []
     },
-    moods: {
-      personA: "😊",
-      personB: "😌"
-    },
+    moods: { personA: "😊", personB: "😌", note: "" },
+    milestones: [
+      { id: cryptoId(), title: "出会った日", date: shiftYear(startKey, -1), emoji: "✨", note: "ここからふたりの物語が始まった。" },
+      { id: cryptoId(), title: "お付き合い開始", date: startKey, emoji: "💕", note: "大切な記念日。" },
+      { id: cryptoId(), title: "初めての旅行", date: addDays(startKey, 150), emoji: "✈️", note: "また行きたい場所。" }
+    ],
     memories: [
-      {
-        id: cryptoId(),
-        title: "沖縄旅行",
-        caption: "きれいな海と美味しいごはん。次は夕日も見に行こう。",
-        place: "沖縄",
-        date: "2024-05-03",
-        emoji: "🌺",
-        image: ""
-      },
-      {
-        id: cryptoId(),
-        title: "クリスマスディナー",
-        caption: "予約してくれたお店が本当に素敵だった日。",
-        place: "東京",
-        date: "2023-12-24",
-        emoji: "🎄",
-        image: ""
-      },
-      {
-        id: cryptoId(),
-        title: "初めてのキャンプ",
-        caption: "焚き火を見ながら夜遅くまで話した。",
-        place: "山梨",
-        date: "2022-07-16",
-        emoji: "⛺",
-        image: ""
-      }
+      { id: cryptoId(), title: "沖縄旅行", caption: "きれいな海と美味しいごはん。次は夕日も見に行こう。", place: "沖縄", date: "2024-05-03", emoji: "🌺", image: "", tags: ["旅行", "海"] },
+      { id: cryptoId(), title: "クリスマスディナー", caption: "予約してくれたお店が本当に素敵だった日。", place: "東京", date: "2023-12-24", emoji: "🎄", image: "", tags: ["記念日", "ごはん"] },
+      { id: cryptoId(), title: "初めてのキャンプ", caption: "焚き火を見ながら夜遅くまで話した。", place: "山梨", date: "2022-07-16", emoji: "⛺", image: "", tags: ["自然", "夜"] }
     ],
     requests: [
-      {
-        id: cryptoId(),
-        title: "デートを計画しよう",
-        detail: "どこか景色のいい場所に行きたい！",
-        from: "personA",
-        status: "pending",
-        reward: 60,
-        createdAt: todayKey()
-      },
-      {
-        id: cryptoId(),
-        title: "今夜電話してね",
-        detail: "寝る前に少しだけ声が聞きたいな。",
-        from: "personB",
-        status: "accepted",
-        reward: 30,
-        createdAt: todayKey()
-      },
-      {
-        id: cryptoId(),
-        title: "一緒に映画を見る",
-        detail: "週末におすすめ映画を1本見よう。",
-        from: "personA",
-        status: "done",
-        reward: 30,
-        createdAt: todayKey()
-      }
+      { id: cryptoId(), title: "デートを計画しよう", detail: "どこか景色のいい場所に行きたい！", from: "personA", status: "pending", reward: 60, category: "wish", createdAt: todayKey() },
+      { id: cryptoId(), title: "今夜電話してね", detail: "寝る前に少しだけ声が聞きたいな。", from: "personB", status: "accepted", reward: 30, category: "care", createdAt: todayKey() },
+      { id: cryptoId(), title: "一緒に映画を見る", detail: "週末におすすめ映画を1本見よう。", from: "personA", status: "done", reward: 30, category: "date", createdAt: todayKey() }
     ],
     events: [
-      {
-        id: cryptoId(),
-        title: "ディナー予約",
-        date: todayKey(),
-        time: "19:00",
-        note: "レストラン・ソラ",
-        type: "date"
-      },
-      {
-        id: cryptoId(),
-        title: "ビデオ通話",
-        date: todayKey(),
-        time: "21:00",
-        note: "おやすみ前の時間",
-        type: "call"
-      }
+      { id: cryptoId(), title: "ディナー予約", date: todayKey(), time: "19:00", note: "レストラン・ソラ", type: "date" },
+      { id: cryptoId(), title: "ビデオ通話", date: todayKey(), time: "21:00", note: "おやすみ前の時間", type: "call" }
     ],
     todos: [
-      { id: cryptoId(), title: "旅行の計画を立てる", done: false },
-      { id: cryptoId(), title: "プレゼントを選ぶ", done: true },
-      { id: cryptoId(), title: "部屋の掃除", done: true },
-      { id: cryptoId(), title: "写真の整理", done: false }
+      { id: cryptoId(), title: "旅行の計画を立てる", owner: "both", done: false },
+      { id: cryptoId(), title: "プレゼントを選ぶ", owner: "personA", done: true },
+      { id: cryptoId(), title: "部屋の掃除", owner: "personB", done: true },
+      { id: cryptoId(), title: "写真の整理", owner: "both", done: false }
     ],
     privacy: {
       locationSharing: true,
       mode: "timed",
       timedHours: 3,
-      shareHistory: []
+      consentA: true,
+      consentB: true,
+      emergencyOnly: false,
+      shareHistory: [{ at: nowIso(), action: "初期設定", detail: "時間限定共有を選択" }]
     },
-    ui: {
-      view: "home",
-      modal: null,
-      albumTab: "memories",
-      requestFilter: "all"
-    }
+    notifications: { permission: "default", lastReminderCheck: "" },
+    ui: { view: "home", modal: null, albumTab: "memories", requestFilter: "all", selectedDate: todayKey(), toast: "" }
   };
 };
 
 let state = loadState();
 const app = document.getElementById("app");
+render();
+registerServiceWorker();
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    const merged = mergeDeep(defaultState(), parsed);
-    const currentKey = todayKey();
-    if (merged.daily.date !== currentKey) {
-      merged.daily = {
-        date: currentKey,
-        questionIndex: new Date().getDate() % dailyQuestions.length,
-        answerA: "",
-        answerB: "",
-        revealed: false
-      };
+    const base = defaultState();
+    if (!raw) return base;
+    const merged = mergeDeep(base, JSON.parse(raw));
+    merged.meta.version = VERSION;
+    const today = todayKey();
+    if (merged.lastVisit !== today) {
       merged.streak = Number(merged.streak || 0) + 1;
+      merged.bestStreak = Math.max(Number(merged.bestStreak || 0), merged.streak);
+      merged.lastVisit = today;
+    }
+    if (merged.daily.date !== today) {
+      if (merged.daily.answerA || merged.daily.answerB) {
+        merged.daily.history = [{ ...merged.daily }, ...(merged.daily.history || [])].slice(0, 30);
+      }
+      merged.daily.date = today;
+      merged.daily.questionIndex = new Date().getDate() % questions.length;
+      merged.daily.answerA = "";
+      merged.daily.answerB = "";
+      merged.daily.revealed = false;
     }
     return merged;
-  } catch (error) {
-    console.warn("Failed to load state", error);
+  } catch (e) {
+    console.warn(e);
     return defaultState();
   }
 }
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function setState(updater) {
-  state = typeof updater === "function" ? updater(structuredClone(state)) : updater;
-  saveState();
-  render();
-}
-
-function mergeDeep(base, patch) {
+function saveState(){ state.meta.updatedAt = nowIso(); localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function setState(updater, toast="") { state = typeof updater === "function" ? updater(structuredClone(state)) : updater; saveState(); render(toast); }
+function mergeDeep(base, patch){
   if (!patch || typeof patch !== "object") return base;
-  const result = Array.isArray(base) ? [...base] : { ...base };
-  for (const [key, value] of Object.entries(patch)) {
-    if (value && typeof value === "object" && !Array.isArray(value) && base[key] && typeof base[key] === "object" && !Array.isArray(base[key])) {
-      result[key] = mergeDeep(base[key], value);
-    } else {
-      result[key] = value;
-    }
+  const out = Array.isArray(base) ? [...base] : { ...base };
+  for (const [k,v] of Object.entries(patch)) {
+    if (v && typeof v === "object" && !Array.isArray(v) && base[k] && typeof base[k] === "object" && !Array.isArray(base[k])) out[k] = mergeDeep(base[k], v);
+    else out[k] = v;
   }
-  return result;
+  return out;
 }
+function nowIso(){ return new Date().toISOString(); }
+function todayKey(){ return toKey(new Date()); }
+function toKey(d){ return new Date(d).toISOString().slice(0,10); }
+function cryptoId(){ return window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+function escapeHtml(v=""){ return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function n(v){ return Number(v || 0).toLocaleString("ja-JP"); }
+function formatDate(s, style="short") { if(!s) return "未設定"; const d = new Date(`${s}T00:00:00`); if(Number.isNaN(d.getTime())) return s; return d.toLocaleDateString("ja-JP", style === "long" ? {year:"numeric",month:"long",day:"numeric",weekday:"short"} : {year:"numeric",month:"2-digit",day:"2-digit"}); }
+function daysBetween(a,b){ const x = new Date(`${a}T00:00:00`); const y = new Date(`${b}T00:00:00`); return Math.ceil((y-x)/86400000); }
+function addDays(s, days){ const d = new Date(`${s}T00:00:00`); d.setDate(d.getDate()+days); return toKey(d); }
+function shiftYear(s, years){ const d = new Date(`${s}T00:00:00`); d.setFullYear(d.getFullYear()+years); return toKey(d); }
+function nextYearlyDate(startDate){ const b = new Date(`${startDate}T00:00:00`); const t = new Date(); const n = new Date(t.getFullYear(), b.getMonth(), b.getDate()); const td = new Date(t.getFullYear(),t.getMonth(),t.getDate()); if(n < td) n.setFullYear(t.getFullYear()+1); return toKey(n); }
+function nextAnniversary(){ return nextYearlyDate(state.profile.startDate); }
+function daysToAnniv(){ return Math.max(0, daysBetween(todayKey(), nextAnniversary())); }
+function relationshipDays(){ return Math.max(1, daysBetween(state.profile.startDate, todayKey())); }
+function yearsTogether(){ const s = new Date(`${state.profile.startDate}T00:00:00`); const n = new Date(`${nextAnniversary()}T00:00:00`); return Math.max(1, n.getFullYear() - s.getFullYear()); }
+function level(){ return Math.max(1, Math.floor(Number(state.points||0)/1400)); }
+function currentQuestion(){ return questions[state.daily.questionIndex % questions.length]; }
+function personLabel(key){ return key === "personA" ? state.profile.personA : key === "personB" ? state.profile.personB : "ふたり"; }
+function avatar(key){ return key === "personA" ? state.profile.avatarA : key === "personB" ? state.profile.avatarB : "💞"; }
+function statusLabel(s){ return s === "pending" ? "未対応" : s === "accepted" ? "受付中" : "完了"; }
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function cryptoId() {
-  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function escapeHtml(value = "") {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatDate(dateString, style = "short") {
-  if (!dateString) return "未設定";
-  const date = new Date(`${dateString}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return dateString;
-  if (style === "long") {
-    return date.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
-  }
-  return date.toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" });
-}
-
-function daysBetween(from, to) {
-  const start = new Date(`${from}T00:00:00`);
-  const end = new Date(`${to}T00:00:00`);
-  return Math.max(0, Math.ceil((end - start) / 86400000));
-}
-
-function nextYearlyDate(startDate) {
-  const base = new Date(`${startDate}T00:00:00`);
-  const today = new Date();
-  const next = new Date(today.getFullYear(), base.getMonth(), base.getDate());
-  if (next < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-    next.setFullYear(today.getFullYear() + 1);
-  }
-  return next.toISOString().slice(0, 10);
-}
-
-function relationshipDays() {
-  return Math.max(1, daysBetween(state.profile.startDate, todayKey()));
-}
-
-function nextAnniversary() {
-  return nextYearlyDate(state.profile.startDate);
-}
-
-function yearsTogether() {
-  const start = new Date(`${state.profile.startDate}T00:00:00`);
-  const next = new Date(`${nextAnniversary()}T00:00:00`);
-  return Math.max(1, next.getFullYear() - start.getFullYear());
-}
-
-function coupleLevel() {
-  return Math.max(1, Math.floor(Number(state.points || 0) / 1400));
-}
-
-function render() {
+function render(toast="") {
   app.innerHTML = `
     <main class="app-shell">
       <aside class="desktop-aside">
         <div class="logo">∞</div>
-        <h1>${escapeHtml(state.profile.appName)}<br>Couples OS</h1>
-        <p>記念日、アルバム、お願い掲示板、共有カレンダー、プライバシーをひとつに。ふたりの名前を入れるだけで、毎日の関係メンテナンスが始まります。</p>
+        <h1>Couplee<br>Couples OS</h1>
+        <p>画像のUIをベースに、ホーム・記念日・アルバム・お願い掲示板・共有カレンダー・プライバシーを統合したカップルアプリです。</p>
         <div class="feature-list">
-          ${featureChip("💬", "一日一問で、自然に会話が生まれる")}
-          ${featureChip("📷", "思い出をアルバムとタイムラインに保存")}
-          ${featureChip("🗓️", "予定とお願いを共有して生活摩擦を減らす")}
-          ${featureChip("🛡️", "位置情報は同意ベースで安全に管理")}
+          ${feature("💬","一日一問と気分共有で会話を作る")}
+          ${feature("🎂","記念日・通知・マイルストーンを管理")}
+          ${feature("📷","写真と思い出をタイムライン化")}
+          ${feature("🛡️","GPSは同意ベースでON/OFF可能")}
         </div>
       </aside>
-      <section class="device" aria-label="Couplee app preview">
-        ${state.profile.isReady ? renderApp() : renderOnboarding()}
+      <section class="device">
+        ${state.profile.isReady ? renderPhone() : renderOnboarding()}
         ${state.ui.modal ? renderModal(state.ui.modal) : ""}
+        ${toast ? `<div class="toast">${escapeHtml(toast)}</div>` : ""}
       </section>
     </main>`;
-
   bindEvents();
+  if (toast) setTimeout(()=>{ if(app.querySelector('.toast')) render(); }, 1800);
 }
-
-function featureChip(icon, text) {
-  return `<div class="feature-chip"><span>${icon}</span><strong>${escapeHtml(text)}</strong></div>`;
-}
-
-function statusBar() {
-  return `
-    <div class="status-row">
-      <span>9:41</span>
-      <div class="signal"><span></span><span></span><span></span> <strong>5G</strong> 🔋</div>
-    </div>`;
-}
-
-function renderOnboarding() {
-  return `
-    <div class="onboarding">
-      ${statusBar()}
-      <div class="brand">
-        <div class="logo">∞</div>
-        <h1>Couplee</h1>
-        <p>ふたりの毎日を、もっと愛おしく。<br>名前と記念日を入れるだけで、専用のホーム画面が完成します。</p>
+function feature(icon,text){ return `<div class="feature-chip"><span>${icon}</span><strong>${escapeHtml(text)}</strong></div>`; }
+function statusBar(){ return `<div class="status-row"><span>9:41</span><div class="signal"><span></span><span></span><span></span><strong>5G</strong> 🔋</div></div>`; }
+function renderOnboarding(){
+  return `<div class="phone"><div class="content" style="padding-bottom:30px">
+    ${statusBar()}
+    <div class="brand"><div class="logo">∞</div><h1>Couplee</h1><p>ふたりの名前と記念日を入れると、画像のような専用ホーム画面に反映されます。</p></div>
+    <form id="onboardingForm" class="card form-card">
+      <div class="form-grid">
+        ${field("あなたの名前","personA",state.profile.personA)}
+        ${field("パートナーの名前","personB",state.profile.personB)}
       </div>
-      <form id="onboardingForm" class="card form-card">
-        <div class="form-grid">
-          <div class="field">
-            <label for="personA">あなたの名前</label>
-            <input id="personA" name="personA" value="${escapeHtml(state.profile.personA)}" required maxlength="20" />
-          </div>
-          <div class="field">
-            <label for="personB">パートナーの名前</label>
-            <input id="personB" name="personB" value="${escapeHtml(state.profile.personB)}" required maxlength="20" />
-          </div>
-        </div>
-        <div class="field">
-          <label for="startDate">交際開始日 / 大切な日</label>
-          <input id="startDate" name="startDate" type="date" value="${escapeHtml(state.profile.startDate)}" required />
-        </div>
-        <div class="field">
-          <label for="anniversaryName">記念日の名前</label>
-          <input id="anniversaryName" name="anniversaryName" value="${escapeHtml(state.profile.anniversaryName)}" maxlength="24" />
-        </div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="phase">関係フェーズ</label>
-            <select id="phase" name="phase">
-              ${option("交際初期", state.profile.phase)}
-              ${option("遠距離", state.profile.phase)}
-              ${option("同棲", state.profile.phase)}
-              ${option("新婚", state.profile.phase)}
-              ${option("子育て前後", state.profile.phase)}
-              ${option("関係改善", state.profile.phase)}
-            </select>
-          </div>
-          <div class="field">
-            <label for="isLongDistance">距離感</label>
-            <select id="isLongDistance" name="isLongDistance">
-              <option value="true" ${state.profile.isLongDistance ? "selected" : ""}>遠距離あり</option>
-              <option value="false" ${!state.profile.isLongDistance ? "selected" : ""}>近くに住んでいる</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn full" type="submit">ふたりのホームを作成する</button>
-        <p class="notice">このプロトタイプは端末内のlocalStorageに保存されます。本番ではSupabase / Firebase連携でパートナー同期できます。</p>
-      </form>
-    </div>`;
+      <div class="form-grid">
+        ${field("あなたのアイコン","avatarA",state.profile.avatarA)}
+        ${field("相手のアイコン","avatarB",state.profile.avatarB)}
+      </div>
+      ${field("交際開始日 / 大切な日","startDate",state.profile.startDate,"date")}
+      ${field("記念日の名前","anniversaryName",state.profile.anniversaryName)}
+      <div class="field"><label>関係フェーズ</label><select name="phase">
+        ${opt("交際初期",state.profile.phase)}${opt("遠距離",state.profile.phase)}${opt("同棲",state.profile.phase)}${opt("新婚",state.profile.phase)}${opt("子あり前後",state.profile.phase)}${opt("改善したい",state.profile.phase)}
+      </select></div>
+      ${field("ふたりの目標","coupleGoal",state.profile.coupleGoal)}
+      <label class="todo" style="margin:4px 0 14px"><input type="checkbox" name="isLongDistance" ${state.profile.isLongDistance?"checked":""}><span>遠距離・会えない時間が多い</span></label>
+      <button class="btn primary full">ふたりのアプリを始める</button>
+    </form>
+  </div></div>`;
 }
+function field(label,name,value,type="text"){ return `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${escapeHtml(value)}" required></div>`; }
+function opt(value,selected){ return `<option value="${escapeHtml(value)}" ${value===selected?"selected":""}>${escapeHtml(value)}</option>`; }
 
-function option(value, selected) {
-  return `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`;
-}
-
-function renderApp() {
-  return `
-    <div class="screen">
-      ${statusBar()}
-      ${renderView()}
-    </div>
-    ${renderNav()}`;
-}
-
-function renderView() {
-  switch (state.ui.view) {
-    case "anniversary": return renderAnniversary();
-    case "album": return renderAlbum();
-    case "requests": return renderRequests();
-    case "calendar": return renderCalendar();
-    case "privacy": return renderPrivacy();
-    default: return renderHome();
-  }
-}
-
-function renderTopbar(title, subtitle, action = "") {
-  return `
+function renderPhone(){
+  return `<div class="phone">
+    ${statusBar()}
     <div class="topbar">
-      <div class="h-title">
-        <h1>${escapeHtml(title)}</h1>
-        <p>${escapeHtml(subtitle)}</p>
-      </div>
-      ${action}
-    </div>`;
-}
-
-function avatarPair() {
-  return `<div class="avatar-pair"><div class="avatar">${initialEmoji(state.profile.personA, 0)}</div><div class="avatar">${initialEmoji(state.profile.personB, 1)}</div></div>`;
-}
-
-function initialEmoji(name, index) {
-  const icons = ["😊", "😌", "🌸", "🌙", "🐰", "🧸"];
-  const code = [...String(name || "")].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  return icons[(code + index) % icons.length];
-}
-
-function renderHome() {
-  const anniv = nextAnniversary();
-  const days = daysBetween(todayKey(), anniv);
-  const level = coupleLevel();
-  const progress = Math.min(100, Math.round(((state.points % 1400) / 1400) * 100));
-  const upcoming = [...state.events].sort((a,b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 3);
-
-  return `
-    ${renderTopbar(`おはよう、${state.profile.personA}さん ☀️`, "素敵な1日をふたりでつくろうね", avatarPair())}
-    <div class="stack-lg">
-      <div class="grid-2">
-        <article class="card hero-card">
-          <p class="kicker">記念日まであと</p>
-          <div class="big-num">${days}<span>日</span></div>
-          <div class="meta">${formatDate(anniv, "long")}<br>${yearsTogether()}年 ${escapeHtml(state.profile.anniversaryName)} 💕</div>
-        </article>
-        <div class="stack">
-          <article class="card level-card">
-            <h3>カップルレベル</h3>
-            <div class="level-value">Lv. ${level}</div>
-            <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
-            <div class="meta">あと ${1400 - (state.points % 1400)}pt</div>
-          </article>
-          <article class="card points-card">
-            <h3>ハートポイント</h3>
-            <div class="points"><span class="heart-chip">♡</span>${state.points.toLocaleString()}</div>
-          </article>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <article class="card question-card">
-          <p class="kicker">今日の質問</p>
-          <div class="question-text">${escapeHtml(dailyQuestions[state.daily.questionIndex])}</div>
-          <button class="btn small" data-modal="daily">答える</button>
-          <div class="mascot">🐰</div>
-        </article>
-        <article class="card mood-card">
-          <p class="kicker">気分チェック</p>
-          <div class="meta">お互いの気分をシェアしよう</div>
-          <div class="mood-grid">
-            ${moodSelect("personA", state.profile.personA, state.moods.personA)}
-            ${moodSelect("personB", state.profile.personB, state.moods.personB)}
-          </div>
-        </article>
-      </div>
-
-      <article class="card streak-card">
-        <span>🔥 連続記録</span>
-        <strong>${state.streak}日</strong>
-        <span>ベスト: ${state.bestStreak}日</span>
-      </article>
-
-      <div>
-        <div class="section-head"><h3>予定</h3><button data-view="calendar">すべて見る</button></div>
-        <div class="list">
-          ${upcoming.length ? upcoming.map(renderEventListItem).join("") : empty("🗓️", "予定はまだありません")}
-        </div>
-      </div>
-    </div>`;
-}
-
-function moodSelect(key, name, value) {
-  const moods = ["😊", "😌", "🥰", "😴", "😢", "😤", "🤒", "🔥"];
-  return `
-    <div class="mood-item">
-      <div class="mood-face">${escapeHtml(value)}</div>
-      <select data-mood="${key}" aria-label="${escapeHtml(name)}の気分">
-        ${moods.map(m => `<option value="${m}" ${m === value ? "selected" : ""}>${m} ${escapeHtml(name)}</option>`).join("")}
-      </select>
-    </div>`;
-}
-
-function renderEventListItem(event) {
-  return `
-    <div class="list-item">
-      <div class="icon-box">${event.type === "call" ? "📹" : "🗓️"}</div>
-      <div class="item-main"><strong>${escapeHtml(event.time)}　${escapeHtml(event.title)}</strong><span>${formatDate(event.date)} / ${escapeHtml(event.note || "")}</span></div>
-      ${avatarPairSmall()}
-    </div>`;
-}
-
-function avatarPairSmall() {
-  return `<div class="avatar-pair"><div class="avatar small">${initialEmoji(state.profile.personA, 0)}</div><div class="avatar small">${initialEmoji(state.profile.personB, 1)}</div></div>`;
-}
-
-function renderAnniversary() {
-  const anniv = nextAnniversary();
-  const days = daysBetween(todayKey(), anniv);
-  const totalDays = relationshipDays();
-  const start = state.profile.startDate;
-  const items = [
-    ["💕", "出会った日", start],
-    ["💌", "お付き合い開始", start],
-    ["💯", "100日記念日", addDays(start, 100)],
-    ["🎂", "1年記念日", addYears(start, 1)],
-    ["🌟", "2年記念日", addYears(start, 2)],
-    ["🏆", `次の${yearsTogether()}年記念日`, anniv]
-  ];
-
-  return `
-    ${renderTopbar("記念日", "大切な日を一緒にお祝いしよう", `<button class="btn small secondary" data-modal="settings">編集</button>`)}
-    <div class="stack-lg">
-      <article class="card hero-card">
-        <p class="kicker">次の記念日まで</p>
-        <div class="big-num">${days}<span>日</span></div>
-        <div class="meta">${formatDate(anniv, "long")}<br>${yearsTogether()}年 ${escapeHtml(state.profile.anniversaryName)} 💕</div>
-      </article>
-
-      <div class="grid-2">
-        <article class="card small-card">
-          <h3>一緒に過ごした日数</h3>
-          <div class="level-value">${totalDays.toLocaleString()}日</div>
-          <div class="meta">毎日がふたりの資産です</div>
-        </article>
-        <article class="card small-card">
-          <h3>今月のハート</h3>
-          <div class="level-value">+120</div>
-          <div class="meta">お願い完了で増えます</div>
-        </article>
-      </div>
-
-      <section>
-        <div class="section-head"><h3>ふたりの軌跡</h3></div>
-        <div class="timeline">
-          ${items.map(([icon, title, date]) => `<div class="timeline-item" data-icon="${icon}"><strong>${escapeHtml(title)}</strong><span>${formatDate(date)}</span></div>`).join("")}
-        </div>
-      </section>
-
-      <section>
-        <div class="section-head"><h3>マイルストーンバッジ</h3></div>
-        <div class="badge-grid">
-          ${badge("💯", "100日")}
-          ${badge("🎂", "1年記念")}
-          ${badge("📷", "思い出")}
-          ${badge("🗓️", "予定上手")}
-          ${badge("💬", "会話マスター")}
-          ${badge("🛡️", "安心設計")}
-        </div>
-      </section>
-
-      <section>
-        <div class="section-head"><h3>おすすめプラン</h3></div>
-        <div class="suggestion-row">
-          ${suggestion("s1", "週末旅行", "自然の中でリラックス")}
-          ${suggestion("s2", "サプライズディナー", "特別な夜にしよう")}
-          ${suggestion("s3", "思い出アルバム", "一年分を振り返る")}
-        </div>
-      </section>
-    </div>`;
-}
-
-function addDays(dateString, days) {
-  const d = new Date(`${dateString}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function addYears(dateString, years) {
-  const d = new Date(`${dateString}T00:00:00`);
-  d.setFullYear(d.getFullYear() + years);
-  return d.toISOString().slice(0, 10);
-}
-
-function badge(icon, label) {
-  return `<div class="badge"><div>${icon}</div><strong>${escapeHtml(label)}</strong></div>`;
-}
-
-function suggestion(cls, title, text) {
-  return `<div class="suggestion ${cls}"><h4>${escapeHtml(title)}</h4><p>${escapeHtml(text)}</p></div>`;
-}
-
-function renderAlbum() {
-  const sorted = [...state.memories].sort((a,b) => b.date.localeCompare(a.date));
-  return `
-    ${renderTopbar("アルバム", "思い出を残して、未来に振り返ろう", `<button class="btn icon" data-modal="memory">+</button>`)}
-    <div class="tab-row">
-      ${tab("memories", "思い出", state.ui.albumTab, "albumTab")}
-      ${tab("photos", "写真", state.ui.albumTab, "albumTab")}
-      ${tab("timeline", "タイムライン", state.ui.albumTab, "albumTab")}
-      ${tab("spots", "スポット", state.ui.albumTab, "albumTab")}
+      <div class="hello"><h2>${viewTitle()}</h2><p>${escapeHtml(state.profile.personA)} × ${escapeHtml(state.profile.personB)}｜${escapeHtml(state.profile.phase)}</p></div>
+      <div class="avatars"><div class="avatar">${escapeHtml(state.profile.avatarA)}</div><div class="avatar">${escapeHtml(state.profile.avatarB)}</div></div>
     </div>
-    <div class="list">
-      ${sorted.length ? sorted.map(renderMemory).join("") : empty("📷", "まだ思い出がありません。右上の＋から追加できます。")}
-    </div>`;
+    <div class="content">${renderView()}</div>
+    ${renderNav()}
+  </div>`;
 }
+function viewTitle(){ return ({home:"ホーム",anniversary:"記念日",album:"アルバム",board:"お願い掲示板",calendar:"共有カレンダー",privacy:"プライバシー"})[state.ui.view] || "ホーム"; }
+function renderNav(){ const tabs=[['home','🏠','ホーム'],['anniversary','🎂','記念日'],['album','📷','アルバム'],['board','💌','お願い'],['calendar','🗓️','カレンダー'],['privacy','🛡️','安全']]; return `<nav class="nav">${tabs.map(t=>`<button data-view="${t[0]}" class="${state.ui.view===t[0]?'active':''}"><span>${t[1]}</span>${t[2]}</button>`).join('')}</nav>`; }
+function renderView(){ return ({home:renderHome,anniversary:renderAnniversary,album:renderAlbum,board:renderBoard,calendar:renderCalendar,privacy:renderPrivacy})[state.ui.view]?.() || renderHome(); }
 
-function tab(value, label, current, attr) {
-  return `<button class="${value === current ? "active" : ""}" data-${attr}="${value}">${escapeHtml(label)}</button>`;
+function renderHome(){
+  const exp = Math.min(100, state.companion.exp || 0);
+  return `<section>
+    <div class="card hero countdown">
+      <div><div class="count-label">${escapeHtml(state.profile.anniversaryName)}まであと</div><div class="count-num">${daysToAnniv()}<small>日</small></div><span class="pill">🎂 ${formatDate(nextAnniversary(),"long")}・${yearsTogether()}年記念</span></div>
+      <div class="mascot" title="成長マスコット">${escapeHtml(state.companion.emoji)}</div>
+    </div>
+    <div class="section grid2">
+      ${metric("🔥",`${state.streak}日`,"連続記録")}
+      ${metric("💗",n(state.points),"ハートポイント")}
+      ${metric("🌱",`Lv.${level()}`,"カップルレベル")}
+      ${metric("🐰",`${exp}%`,`${state.companion.name}の成長`)}
+    </div>
+    <div class="section">${renderDailyCard()}</div>
+    <div class="section"><div class="section-head"><h3>気分チェック</h3><small>今の状態を軽く共有</small></div>${renderMood()}</div>
+    <div class="section"><div class="section-head"><h3>クイック操作</h3><small>3タップ以内</small></div><div class="quick">
+      <button data-open="memory"><span>📷</span>思い出</button><button data-open="request"><span>💌</span>お願い</button><button data-open="event"><span>🗓️</span>予定</button><button data-view="privacy"><span>🛡️</span>安全</button>
+    </div></div>
+    <div class="section"><div class="section-head"><h3>今日の予定</h3><button class="btn ghost" data-open="event">追加</button></div>${renderEvents(state.events.filter(e=>e.date===todayKey()).slice(0,3))}</div>
+  </section>`;
 }
-
-function renderMemory(memory) {
-  const img = memory.image
-    ? `<img class="memory-photo" src="${memory.image}" alt="${escapeHtml(memory.title)}" />`
-    : `<div class="memory-photo">${escapeHtml(memory.emoji || "📷")}</div>`;
-  return `
-    <article class="card memory-card">
-      ${img}
-      <div>
-        <h4>${escapeHtml(memory.title)} ${escapeHtml(memory.emoji || "")}</h4>
-        <p>${escapeHtml(memory.caption)}</p>
-        <div class="memory-meta"><span>${formatDate(memory.date)}</span><span>${escapeHtml(memory.place || "場所未設定")}</span><span>♡ ${Math.max(12, memory.title.length * 3)}</span></div>
-        <div class="inline-actions"><button class="btn small ghost" data-delete-memory="${memory.id}">削除</button></div>
-      </div>
-    </article>`;
+function metric(icon,big,label){ return `<div class="card metric"><span>${icon} ${label}</span><b>${escapeHtml(big)}</b></div>`; }
+function renderDailyCard(){
+  const both = state.daily.answerA && state.daily.answerB;
+  return `<div class="card daily-card">
+    <div class="daily-q"><div class="iconbox">💬</div><div><h3>${escapeHtml(currentQuestion())}</h3><p>ふたりが答えると、お互いの回答が開きます。</p></div></div>
+    <div class="answer-grid">
+      <div class="field"><label>${escapeHtml(state.profile.personA)}の回答</label><textarea data-daily="answerA" placeholder="ここに入力">${escapeHtml(state.daily.answerA)}</textarea></div>
+      <div class="field"><label>${escapeHtml(state.profile.personB)}の回答</label><textarea data-daily="answerB" placeholder="ここに入力">${escapeHtml(state.daily.answerB)}</textarea></div>
+    </div>
+    <div class="btn-row"><button class="btn primary" data-action="revealDaily" ${both?"":"disabled"}>回答を開く</button><button class="btn" data-action="nextQuestion">質問を変える</button></div>
+    ${state.daily.revealed ? `<div class="reveal"><div class="answer-box"><strong>${escapeHtml(state.profile.personA)}</strong><p>${escapeHtml(state.daily.answerA)}</p></div><div class="answer-box"><strong>${escapeHtml(state.profile.personB)}</strong><p>${escapeHtml(state.daily.answerB)}</p></div></div>` : ""}
+  </div>`;
 }
+function renderMood(){ const moods=["😊","😌","🥰","😢","😴","😤"]; return `<div class="mood-row">${['personA','personB'].map(k=>`<div class="card mood-card"><header><span>${escapeHtml(avatar(k))} ${escapeHtml(personLabel(k))}</span><b>${escapeHtml(state.moods[k])}</b></header><div class="moods">${moods.map(m=>`<button data-mood-person="${k}" data-mood="${m}" class="${state.moods[k]===m?'active':''}">${m}</button>`).join('')}</div></div>`).join('')}</div>`; }
 
-function renderRequests() {
+function renderAnniversary(){
+  const reminder = state.profile.reminderDays || [];
+  return `<section>
+    <div class="card hero countdown"><div><div class="count-label">次の記念日まで</div><div class="count-num">${daysToAnniv()}<small>日</small></div><span class="pill">${formatDate(nextAnniversary(),"long")}・${escapeHtml(state.profile.anniversaryName)}</span></div><div class="mascot">🎂</div></div>
+    <div class="section grid3">${metric("📅",`${relationshipDays()}日`,"一緒に過ごした日数")}${metric("🏅",`${state.milestones.length}個`,"軌跡")}${metric("🔔",`${reminder.join('/') || '-'}日前`,"通知")}</div>
+    <div class="section"><div class="section-head"><h3>記念日リマインダー</h3><button class="btn ghost" data-action="testReminder">通知テスト</button></div><div class="card form-card"><p style="margin:0 0 12px;color:var(--muted);font-size:12px;font-weight:800">30日前・7日前・1日前に記念日を知らせる設定です。ブラウザ通知を許可すると通知テストが使えます。</p><div class="btn-row"><button class="btn ${reminder.includes(30)?'primary':''}" data-reminder="30">30日前</button><button class="btn ${reminder.includes(7)?'primary':''}" data-reminder="7">7日前</button><button class="btn ${reminder.includes(1)?'primary':''}" data-reminder="1">1日前</button></div></div></div>
+    <div class="section"><div class="section-head"><h3>ふたりの軌跡</h3><button class="btn ghost" data-open="milestone">追加</button></div><div class="timeline">${state.milestones.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(m=>`<div class="card time-item"><h4>${escapeHtml(m.emoji)} ${escapeHtml(m.title)}</h4><p>${formatDate(m.date)}｜${escapeHtml(m.note || '')}</p></div>`).join('')}</div></div>
+    <div class="section"><div class="section-head"><h3>マイルストーンバッジ</h3><small>自動獲得</small></div><div class="badge-grid">${badges().map(b=>`<div class="badge"><i>${b[0]}</i><b>${b[1]}</b></div>`).join('')}</div></div>
+    <div class="section"><div class="section-head"><h3>おすすめプラン</h3><small>記念日前に使う</small></div>${dateIdeas.slice(0,3).map(i=>`<div class="event" style="margin-bottom:8px"><time>${i[2]}</time><div><h4>${i[0]}</h4><p>${i[1]}</p></div></div>`).join('')}</div>
+  </section>`;
+}
+function badges(){ const d=relationshipDays(); const list=[["💯","100日"],["🎂","1年記念"],["📷","思い出"],["💌","お願い達成"],["🔥","継続記録"],["🛡️","安全設定"]]; if(d>730) list.push(["💎","2年以上"]); return list; }
+
+function renderAlbum(){
+  const sorted = state.memories.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return `<section>
+    <div class="screen-title"><div><h2>アルバム</h2><p>写真・日付・場所・キャプションを保存</p></div><button class="btn primary" data-open="memory">追加</button></div>
+    <div class="tabrow"><button class="active">思い出</button><button>写真</button><button>タイムライン</button><button>スポット</button></div>
+    <div class="section card form-card"><div class="section-head"><h3>Memory Graph</h3><small>${state.memories.length}件</small></div><p style="margin:0;color:var(--muted);font-size:12px;font-weight:800;line-height:1.7">思い出は日付順に整理され、次の記念日やデート提案に使える“ふたりの記憶”として残ります。</p></div>
+    <div class="section album-grid">${sorted.length ? sorted.map(memoryCard).join('') : `<div class="card empty">まだ思い出がありません。</div>`}</div>
+  </section>`;
+}
+function memoryCard(m){ return `<article class="card memory"><div class="memory-img">${m.image ? `<img src="${m.image}" alt="">` : escapeHtml(m.emoji || '📷')}</div><div class="memory-body"><div class="memory-meta"><span class="pill">${formatDate(m.date)}</span><span class="pill">📍 ${escapeHtml(m.place || '場所未設定')}</span></div><h3>${escapeHtml(m.title)}</h3><p>${escapeHtml(m.caption || '')}</p><div class="btn-row" style="margin-top:10px"><button class="btn danger" data-delete-memory="${m.id}">削除</button></div></div></article>`; }
+
+function renderBoard(){
   const filter = state.ui.requestFilter;
-  const items = state.requests.filter(req => filter === "all" || req.status === filter);
-  const completedThisMonth = state.requests.filter(req => req.status === "done").reduce((sum, req) => sum + Number(req.reward || 0), 0);
-  const ratio = Math.min(100, Math.round((state.requests.filter(r => r.status === "done").length / Math.max(1, state.requests.length)) * 100));
+  const items = state.requests.filter(r => filter === "all" || r.status === filter);
+  const done = state.requests.filter(r=>r.status==='done').length;
+  const rate = Math.round(done / Math.max(1,state.requests.length) * 100);
+  return `<section>
+    <div class="screen-title"><div><h2>お願い掲示板</h2><p>お願い・やりたいこと・小さなタスクを共有</p></div><button class="btn primary" data-open="request">追加</button></div>
+    <div class="tabrow">${[['all','すべて'],['pending','未対応'],['accepted','受付中'],['done','完了']].map(t=>`<button data-filter="${t[0]}" class="${filter===t[0]?'active':''}">${t[1]}</button>`).join('')}</div>
+    <div class="section grid2"><div class="card metric"><span>💗 今月のハート報酬</span><b>+${state.requests.filter(r=>r.status==='done').reduce((s,r)=>s+Number(r.reward||0),0)}</b></div><div class="card metric"><span>🤝 ふたりの協力度</span><b>${rate}%</b><div class="progress"><span style="width:${rate}%"></span></div></div></div>
+    <div class="section">${items.length ? items.map(requestCard).join('') : `<div class="card empty">このステータスのお願いはありません。</div>`}</div>
+  </section>`;
+}
+function requestCard(r){ return `<article class="card request"><div class="request-top"><div><h3>${escapeHtml(r.title)}</h3><p>${escapeHtml(r.detail)}</p></div><span class="tag ${r.status}">${statusLabel(r.status)}</span></div><div class="btn-row"><span class="pill">${escapeHtml(avatar(r.from))} ${escapeHtml(personLabel(r.from))}から</span><span class="pill">+${Number(r.reward||0)}pt</span></div><div class="btn-row"><button class="btn" data-req-status="${r.id}:pending">未対応</button><button class="btn" data-req-status="${r.id}:accepted">受付中</button><button class="btn primary" data-req-status="${r.id}:done">完了</button><button class="btn danger" data-delete-request="${r.id}">削除</button></div></article>`; }
 
-  return `
-    ${renderTopbar("お願い掲示板", "お願いごとややりたいことを共有しよう", `<button class="btn small" data-modal="request">＋お願いする</button>`)}
-    <div class="tab-row">
-      ${tab("all", "すべて", filter, "requestFilter")}
-      ${tab("pending", "未対応", filter, "requestFilter")}
-      ${tab("accepted", "受付中", filter, "requestFilter")}
-      ${tab("done", "完了", filter, "requestFilter")}
+function renderCalendar(){
+  const selected = state.ui.selectedDate || todayKey();
+  const events = state.events.filter(e=>e.date===selected).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const completed = state.todos.filter(t=>t.done).length;
+  const rate = Math.round(completed / Math.max(1,state.todos.length) * 100);
+  return `<section>
+    <div class="screen-title"><div><h2>共有カレンダー</h2><p>予定・デート・ToDoを一緒に管理</p></div><button class="btn primary" data-open="event">予定追加</button></div>
+    ${renderMonth()}
+    <div class="section"><div class="section-head"><h3>${formatDate(selected)} の予定</h3><button class="btn ghost" data-open="event">追加</button></div>${renderEvents(events)}</div>
+    <div class="section"><div class="section-head"><h3>ToDoリスト</h3><button class="btn ghost" data-open="todo">追加</button></div><div class="card form-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="pill">メンタルロード可視化</span><b>${rate}% 完了</b></div><div class="progress"><span style="width:${rate}%"></span></div></div><div style="display:grid;gap:8px;margin-top:10px">${state.todos.map(t=>`<label class="todo ${t.done?'done':''}"><input type="checkbox" data-todo="${t.id}" ${t.done?'checked':''}><span>${escapeHtml(t.title)}｜${escapeHtml(personLabel(t.owner))}</span><button class="btn danger" data-delete-todo="${t.id}" type="button">削除</button></label>`).join('')}</div></div>
+  </section>`;
+}
+function renderMonth(){
+  const sel = new Date(`${state.ui.selectedDate || todayKey()}T00:00:00`); const y=sel.getFullYear(); const m=sel.getMonth();
+  const first = new Date(y,m,1); const last = new Date(y,m+1,0); const pad=first.getDay(); const cells=[];
+  for(let i=0;i<pad;i++) cells.push(null); for(let d=1; d<=last.getDate(); d++) cells.push(new Date(y,m,d));
+  return `<div class="card calendar-card"><div class="month-head"><button class="btn ghost" data-month="-1">‹</button><b>${y}年${m+1}月</b><button class="btn ghost" data-month="1">›</button></div><div class="month-grid">${['日','月','火','水','木','金','土'].map(d=>`<div class="dow">${d}</div>`).join('')}${cells.map(d=> d ? `<button class="day ${toKey(d)===todayKey()?'today':''} ${state.events.some(e=>e.date===toKey(d))?'has':''}" data-date="${toKey(d)}">${d.getDate()}</button>` : `<div></div>`).join('')}</div></div>`;
+}
+function renderEvents(events){ return events.length ? `<div class="event-list">${events.map(e=>`<div class="event"><time>${escapeHtml(e.time||'--:--')}</time><div><h4>${escapeHtml(e.title)}</h4><p>${escapeHtml(e.note||'')}｜${escapeHtml(e.type||'予定')}</p></div><button class="btn danger" data-delete-event="${e.id}">削除</button></div>`).join('')}</div>` : `<div class="card empty">予定はまだありません。</div>`; }
+
+function renderPrivacy(){
+  return `<section>
+    <div class="screen-title"><div><h2>プライバシー</h2><p>GPSは監視ではなく、同意ベースの安心機能</p></div></div>
+    <div class="card hero"><div class="section-head"><div><h3>位置情報の共有</h3><small>${state.privacy.locationSharing?'ON':'OFF'}｜${privacyModeLabel()}</small></div><button class="switch ${state.privacy.locationSharing?'on':''}" data-action="toggleLocation" aria-label="位置情報共有"></button></div><div class="mini-map"><div class="pin"><span>💞</span></div></div></div>
+    <div class="section" style="display:grid;gap:9px">
+      ${privacyOption('always','📍','常に共有','同意した場合のみ、現在地を共有します。')}
+      ${privacyOption('timed','⏱️','時間限定共有',`${state.privacy.timedHours}時間だけ共有します。`)}
+      ${privacyOption('emergency','🆘','緊急時のみ','普段はOFF、緊急時のみ使います。')}
     </div>
-    <div class="grid-2">
-      <div class="list full">
-        ${items.length ? items.map(renderRequest).join("") : empty("🎁", "このステータスのお願いはありません。")}
-      </div>
-      <article class="card small-card">
-        <h3>今月のハート報酬</h3>
-        <div class="level-value">+${completedThisMonth}</div>
-        <div class="meta">完了したお願いの合計</div>
-      </article>
-      <article class="card small-card">
-        <h3>ふたりの協力度</h3>
-        <div class="level-value">${ratio}%</div>
-        <div class="progress-track"><div class="progress-fill" style="width:${ratio}%"></div></div>
-      </article>
-    </div>`;
+    <div class="section card form-card"><div class="section-head"><h3>同意ステータス</h3><small>双方ONで有効</small></div><label class="todo"><input type="checkbox" data-consent="consentA" ${state.privacy.consentA?'checked':''}><span>${escapeHtml(state.profile.personA)} が同意</span></label><label class="todo"><input type="checkbox" data-consent="consentB" ${state.privacy.consentB?'checked':''}><span>${escapeHtml(state.profile.personB)} が同意</span></label></div>
+    <div class="section"><div class="section-head"><h3>安全操作</h3><small>いつでも解除可能</small></div><div class="grid2"><button class="btn" data-action="exportData">データ書き出し</button><button class="btn" data-action="copyInvite">招待リンク作成</button><button class="btn danger" data-action="unlinkPartner">連携解除</button><button class="btn danger" data-action="wipeData">全データ削除</button></div></div>
+    <div class="section"><div class="section-head"><h3>共有履歴</h3><small>${state.privacy.shareHistory.length}件</small></div><div class="event-list">${state.privacy.shareHistory.slice().reverse().slice(0,5).map(h=>`<div class="event"><time>🛡️</time><div><h4>${escapeHtml(h.action)}</h4><p>${new Date(h.at).toLocaleString('ja-JP')}｜${escapeHtml(h.detail||'')}</p></div></div>`).join('')}</div></div>
+  </section>`;
+}
+function privacyOption(mode,icon,title,desc){ return `<button class="privacy-option ${state.privacy.mode===mode?'active':''}" data-privacy-mode="${mode}"><span>${icon}</span><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml(desc)}</small></div><span>${state.privacy.mode===mode?'✓':''}</span></button>`; }
+function privacyModeLabel(){ return state.privacy.mode==='always'?'常に共有':state.privacy.mode==='emergency'?'緊急時のみ':'時間限定'; }
+
+function renderModal(type){
+  const title = {memory:'思い出を追加',request:'お願いを追加',event:'予定を追加',todo:'ToDoを追加',milestone:'軌跡を追加'}[type] || '追加';
+  return `<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h3>${title}</h3><button class="x" data-close>×</button></div>${modalBody(type)}</div></div>`;
+}
+function modalBody(type){
+  if(type==='memory') return `<form data-form="memory">${field('タイトル','title','')}<div class="form-grid">${field('日付','date',todayKey(),'date')}${field('場所','place','')}</div><div class="field"><label>写真</label><input name="image" type="file" accept="image/*"></div><div class="field"><label>キャプション</label><textarea name="caption" placeholder="その日の気持ちを残す"></textarea></div><button class="btn primary full">保存</button></form>`;
+  if(type==='request') return `<form data-form="request">${field('お願いタイトル','title','')}<div class="field"><label>内容</label><textarea name="detail" placeholder="相手を責めない言い方で書く"></textarea></div><div class="form-grid"><div class="field"><label>投稿者</label><select name="from"><option value="personA">${escapeHtml(state.profile.personA)}</option><option value="personB">${escapeHtml(state.profile.personB)}</option></select></div><div class="field"><label>報酬pt</label><input name="reward" type="number" value="30"></div></div><button class="btn primary full">掲示板に追加</button></form>`;
+  if(type==='event') return `<form data-form="event">${field('予定名','title','')}<div class="form-grid">${field('日付','date',state.ui.selectedDate || todayKey(),'date')}${field('時間','time','19:00','time')}</div>${field('メモ','note','')}<div class="field"><label>種類</label><select name="type"><option value="date">デート</option><option value="call">電話</option><option value="task">用事</option><option value="anniversary">記念日</option></select></div><button class="btn primary full">予定を追加</button></form>`;
+  if(type==='todo') return `<form data-form="todo">${field('ToDo','title','')}<div class="field"><label>担当</label><select name="owner"><option value="both">ふたり</option><option value="personA">${escapeHtml(state.profile.personA)}</option><option value="personB">${escapeHtml(state.profile.personB)}</option></select></div><button class="btn primary full">ToDoを追加</button></form>`;
+  if(type==='milestone') return `<form data-form="milestone">${field('タイトル','title','')}<div class="form-grid">${field('日付','date',todayKey(),'date')}${field('絵文字','emoji','✨')}</div>${field('メモ','note','')}<button class="btn primary full">軌跡に追加</button></form>`;
+  return '';
 }
 
-function renderRequest(req) {
-  const statusMap = {
-    pending: ["未対応", "pending"],
-    accepted: ["受付中", "accepted"],
-    done: ["完了", "done"]
-  };
-  const [label, cls] = statusMap[req.status] || statusMap.pending;
-  return `
-    <article class="card request-card">
-      <div class="request-top">
-        <span class="request-title">${requestIcon(req.title)} ${escapeHtml(req.title)}</span>
-        <span class="status ${cls}">${label}</span>
-      </div>
-      <p>${escapeHtml(req.detail)}</p>
-      <div class="mini-row" style="justify-content:space-between;gap:8px;">
-        <span class="meta">${req.from === "personA" ? escapeHtml(state.profile.personA) : escapeHtml(state.profile.personB)}から / +${req.reward}pt</span>
-        <div class="inline-actions" style="margin:0;">
-          ${req.status !== "accepted" ? `<button class="btn small secondary" data-request-status="${req.id}:accepted">受付</button>` : ""}
-          ${req.status !== "done" ? `<button class="btn small" data-request-status="${req.id}:done">完了</button>` : ""}
-          <button class="btn small ghost" data-delete-request="${req.id}">削除</button>
-        </div>
-      </div>
-    </article>`;
+function bindEvents(){
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setState(s=>{s.ui.view=b.dataset.view; return s;})));
+  document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>setState(s=>{s.ui.modal=b.dataset.open; return s;})));
+  document.querySelectorAll('[data-close], .modal-backdrop').forEach(el=>el.addEventListener('click',e=>{ if(e.target===el || el.dataset.close!==undefined) setState(s=>{s.ui.modal=null; return s;}); }));
+  const onboarding = document.getElementById('onboardingForm');
+  if(onboarding) onboarding.addEventListener('submit', e=>{ e.preventDefault(); const fd=new FormData(onboarding); setState(s=>{ Object.assign(s.profile, Object.fromEntries(fd.entries())); s.profile.isLongDistance = fd.get('isLongDistance') === 'on'; s.profile.isReady = true; s.milestones = [{ id:cryptoId(), title:s.profile.anniversaryName, date:s.profile.startDate, emoji:'💕', note:'ふたりの大切な日' }, ...s.milestones]; return s; }, '専用アプリを作成しました'); });
+  document.querySelectorAll('[data-daily]').forEach(t=>t.addEventListener('input',()=>{ state.daily[t.dataset.daily]=t.value; saveState(); }));
+  document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>handleAction(b.dataset.action)));
+  document.querySelectorAll('[data-mood-person]').forEach(b=>b.addEventListener('click',()=>setState(s=>{s.moods[b.dataset.moodPerson]=b.dataset.mood; s.points+=5; s.companion.exp=Math.min(100,(s.companion.exp||0)+2); return s;}, '気分を共有しました')));
+  document.querySelectorAll('[data-reminder]').forEach(b=>b.addEventListener('click',()=>setState(s=>{ const d=Number(b.dataset.reminder); const arr=new Set(s.profile.reminderDays||[]); arr.has(d)?arr.delete(d):arr.add(d); s.profile.reminderDays=[...arr].sort((a,b)=>b-a); return s;}, '通知設定を更新しました')));
+  document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>setState(s=>{s.ui.requestFilter=b.dataset.filter; return s;})));
+  document.querySelectorAll('[data-req-status]').forEach(b=>b.addEventListener('click',()=>{ const [id,status]=b.dataset.reqStatus.split(':'); setState(s=>{ const r=s.requests.find(x=>x.id===id); if(r){ const was=r.status; r.status=status; if(status==='done' && was!=='done'){ s.points+=Number(r.reward||0); s.companion.exp=Math.min(100,(s.companion.exp||0)+8); } } return s;}, status==='done'?'お願いを完了しました':'ステータスを更新しました'); }));
+  document.querySelectorAll('[data-delete-request]').forEach(b=>b.addEventListener('click',()=>confirm('削除しますか？')&&setState(s=>{s.requests=s.requests.filter(r=>r.id!==b.dataset.deleteRequest); return s;}, '削除しました')));
+  document.querySelectorAll('[data-delete-memory]').forEach(b=>b.addEventListener('click',()=>confirm('削除しますか？')&&setState(s=>{s.memories=s.memories.filter(r=>r.id!==b.dataset.deleteMemory); return s;}, '削除しました')));
+  document.querySelectorAll('[data-delete-event]').forEach(b=>b.addEventListener('click',()=>confirm('削除しますか？')&&setState(s=>{s.events=s.events.filter(r=>r.id!==b.dataset.deleteEvent); return s;}, '削除しました')));
+  document.querySelectorAll('[data-delete-todo]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault(); confirm('削除しますか？')&&setState(s=>{s.todos=s.todos.filter(r=>r.id!==b.dataset.deleteTodo); return s;}, '削除しました');}));
+  document.querySelectorAll('[data-todo]').forEach(c=>c.addEventListener('change',()=>setState(s=>{ const t=s.todos.find(x=>x.id===c.dataset.todo); if(t){ t.done=c.checked; if(c.checked) s.points+=10; } return s;}, 'ToDoを更新しました')));
+  document.querySelectorAll('[data-date]').forEach(b=>b.addEventListener('click',()=>setState(s=>{s.ui.selectedDate=b.dataset.date; return s;})));
+  document.querySelectorAll('[data-month]').forEach(b=>b.addEventListener('click',()=>setState(s=>{ const d=new Date(`${s.ui.selectedDate || todayKey()}T00:00:00`); d.setMonth(d.getMonth()+Number(b.dataset.month)); s.ui.selectedDate=toKey(d); return s;})));
+  document.querySelectorAll('[data-privacy-mode]').forEach(b=>b.addEventListener('click',()=>setState(s=>{s.privacy.mode=b.dataset.privacyMode; s.privacy.shareHistory.push({at:nowIso(),action:'共有モード変更',detail:privacyModeName(b.dataset.privacyMode)}); return s;}, '共有モードを更新しました')));
+  document.querySelectorAll('[data-consent]').forEach(c=>c.addEventListener('change',()=>setState(s=>{s.privacy[c.dataset.consent]=c.checked; s.privacy.shareHistory.push({at:nowIso(),action:'同意設定変更',detail:c.dataset.consent}); return s;}, '同意設定を更新しました')));
+  document.querySelectorAll('[data-form]').forEach(f=>f.addEventListener('submit',handleForm));
 }
+function privacyModeName(m){ return m==='always'?'常に共有':m==='emergency'?'緊急時のみ':'時間限定共有'; }
 
-function requestIcon(title) {
-  if (title.includes("電話")) return "📞";
-  if (title.includes("花")) return "💐";
-  if (title.includes("映画")) return "🎬";
-  if (title.includes("デート")) return "💕";
-  return "🎁";
-}
-
-function renderCalendar() {
-  const events = [...state.events].sort((a,b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-  const today = new Date();
-  const week = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - today.getDay() + i);
-    return d;
-  });
-
-  return `
-    ${renderTopbar("共有カレンダー", "予定を共有して、もっとスムーズに", `<button class="btn icon" data-modal="event">+</button>`)}
-    <div class="stack-lg">
-      <article class="card calendar-card">
-        <div class="row" style="justify-content:space-between;"><strong>${today.getFullYear()}年${today.getMonth() + 1}月</strong><button class="btn small secondary" data-modal="todo">ToDo追加</button></div>
-        <div class="week-row">
-          ${week.map(day => `<div class="day ${sameDay(day, today) ? "today" : ""}"><span>${"日月火水木金土"[day.getDay()]}</span><strong>${day.getDate()}</strong></div>`).join("")}
-        </div>
-      </article>
-
-      <section>
-        <div class="section-head"><h3>予定</h3></div>
-        <div class="list">
-          ${events.length ? events.map(renderCalendarEvent).join("") : empty("🗓️", "予定はまだありません。")}
-        </div>
-      </section>
-
-      <section>
-        <div class="section-head"><h3>ToDoリスト</h3><button data-modal="todo">追加</button></div>
-        <div class="list">
-          ${state.todos.length ? state.todos.map(todo => `<label class="todo ${todo.done ? "completed" : ""}"><input type="checkbox" data-todo="${todo.id}" ${todo.done ? "checked" : ""}/><span>${escapeHtml(todo.title)}</span><button class="btn small ghost" type="button" data-delete-todo="${todo.id}">削除</button></label>`).join("") : empty("✅", "ToDoはありません。")}
-        </div>
-      </section>
-    </div>`;
-}
-
-function sameDay(a, b) {
-  return a.toDateString() === b.toDateString();
-}
-
-function renderCalendarEvent(event) {
-  return `
-    <article class="event-item">
-      <div class="event-time">${escapeHtml(event.time)}</div>
-      <div>
-        <strong>${escapeHtml(event.title)}</strong>
-        <div class="meta">${formatDate(event.date)} / ${escapeHtml(event.note || "メモなし")}</div>
-        <div class="inline-actions"><button class="btn small ghost" data-delete-event="${event.id}">削除</button></div>
-      </div>
-    </article>`;
-}
-
-function renderPrivacy() {
-  return `
-    ${renderTopbar("プライバシー", "安心・安全に使うための設定を大切に", "")}
-    <div class="stack-lg">
-      <article class="card form-card">
-        <div class="row" style="justify-content:space-between;margin-bottom:14px;gap:12px;">
-          <div>
-            <strong>位置情報の共有</strong>
-            <p class="meta">お互いの同意のもとで、安心をサポートします</p>
-          </div>
-          <button class="toggle ${state.privacy.locationSharing ? "on" : ""}" data-toggle-location aria-label="位置情報共有切替"></button>
-        </div>
-        <div class="privacy-mode">
-          ${privacyMode("always", "📍", "常に共有", "常時共有します")}
-          ${privacyMode("timed", "⏱️", "時間限定", `${state.privacy.timedHours}時間だけ共有`)}
-          ${privacyMode("emergency", "🆘", "緊急時のみ", "必要時だけ共有")}
-        </div>
-      </article>
-
-      <article class="card form-card">
-        <div class="section-head" style="margin-top:0;"><h3>同意と境界設定</h3></div>
-        <div class="list">
-          <div class="list-item"><div class="icon-box">👁️</div><div class="item-main"><strong>共有履歴を確認する</strong><span>いつ、どの設定で共有したかを確認できます</span></div></div>
-          <div class="list-item"><div class="icon-box">🔐</div><div class="item-main"><strong>プライバシー設定の詳細</strong><span>位置情報・写真・日記は別々に管理します</span></div></div>
-          <div class="list-item"><div class="icon-box">🚨</div><div class="item-main"><strong>セーフティ導線</strong><span>監視・強要・不安がある場合はすぐ停止できます</span></div></div>
-        </div>
-      </article>
-
-      <div class="privacy-actions">
-        <button class="btn secondary" data-action="unlink">🔗<span>連携解除</span></button>
-        <button class="btn secondary" data-action="export">⬇️<span>データ書き出し</span></button>
-        <button class="btn danger" data-action="deleteAll">🗑️<span>全データ削除</span></button>
-      </div>
-    </div>`;
-}
-
-function privacyMode(mode, icon, title, text) {
-  return `<button class="mode-card ${state.privacy.mode === mode ? "active" : ""}" data-privacy-mode="${mode}"><div class="mode-icon">${icon}</div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(text)}</span></button>`;
-}
-
-function empty(icon, text) {
-  return `<div class="card empty"><div>${icon}</div><p>${escapeHtml(text)}</p></div>`;
-}
-
-function renderNav() {
-  const nav = [
-    ["home", "⌂", "ホーム"],
-    ["anniversary", "♡", "記念日"],
-    ["album", "▧", "アルバム"],
-    ["requests", "❤", "お願い"],
-    ["calendar", "▣", "カレンダー"],
-    ["privacy", "☰", "安全"]
-  ];
-  return `<nav class="nav" aria-label="主要ナビゲーション">${nav.map(([view, icon, label]) => `<button class="${state.ui.view === view ? "active" : ""}" data-view="${view}"><span>${icon}</span><span>${label}</span></button>`).join("")}</nav>`;
-}
-
-function renderModal(type) {
-  const content = {
-    daily: dailyModal(),
-    memory: memoryModal(),
-    request: requestModal(),
-    event: eventModal(),
-    todo: todoModal(),
-    settings: settingsModal()
-  }[type] || "";
-  return `<div class="modal-backdrop" data-close-modal><div class="modal card" data-modal-panel>${content}</div></div>`;
-}
-
-function dailyModal() {
-  return `
-    <h2>今日の質問</h2>
-    <p class="meta">${escapeHtml(dailyQuestions[state.daily.questionIndex])}</p>
-    <form id="dailyForm">
-      <div class="field"><label>${escapeHtml(state.profile.personA)}の回答</label><textarea name="answerA" maxlength="160" placeholder="ここに回答を入力">${escapeHtml(state.daily.answerA)}</textarea></div>
-      <div class="field"><label>${escapeHtml(state.profile.personB)}の回答</label><textarea name="answerB" maxlength="160" placeholder="ここに回答を入力">${escapeHtml(state.daily.answerB)}</textarea></div>
-      ${state.daily.revealed ? `<div class="card form-card"><strong>回答を開示しました 💕</strong><p class="meta">小さな会話を続けることで、ハートポイントが増えます。</p></div>` : ""}
-      <div class="inline-actions"><button type="button" class="btn secondary" data-close>閉じる</button><button class="btn" type="submit">回答を保存して開示</button></div>
-    </form>`;
-}
-
-function memoryModal() {
-  return `
-    <h2>思い出を追加</h2>
-    <form id="memoryForm">
-      <div class="field"><label>タイトル</label><input name="title" required maxlength="32" placeholder="例：温泉旅行" /></div>
-      <div class="form-grid"><div class="field"><label>日付</label><input name="date" type="date" value="${todayKey()}" required /></div><div class="field"><label>場所</label><input name="place" maxlength="24" placeholder="例：箱根" /></div></div>
-      <div class="field"><label>キャプション</label><textarea name="caption" maxlength="180" placeholder="どんな思い出でしたか？"></textarea></div>
-      <div class="field"><label>写真</label><input name="image" type="file" accept="image/*" /></div>
-      <div class="field"><label>絵文字</label><input name="emoji" maxlength="4" placeholder="📷" /></div>
-      <div class="inline-actions"><button type="button" class="btn secondary" data-close>キャンセル</button><button class="btn" type="submit">保存する</button></div>
-    </form>`;
-}
-
-function requestModal() {
-  return `
-    <h2>お願いを追加</h2>
-    <form id="requestForm">
-      <div class="field"><label>お願いタイトル</label><input name="title" required maxlength="32" placeholder="例：今夜電話してね" /></div>
-      <div class="field"><label>内容</label><textarea name="detail" maxlength="180" placeholder="相手が受け取りやすい言い方で書きましょう"></textarea></div>
-      <div class="form-grid"><div class="field"><label>投稿者</label><select name="from"><option value="personA">${escapeHtml(state.profile.personA)}</option><option value="personB">${escapeHtml(state.profile.personB)}</option></select></div><div class="field"><label>報酬pt</label><input name="reward" type="number" min="0" max="300" value="60" /></div></div>
-      <div class="inline-actions"><button type="button" class="btn secondary" data-close>キャンセル</button><button class="btn" type="submit">掲示板に追加</button></div>
-    </form>`;
-}
-
-function eventModal() {
-  return `
-    <h2>予定を追加</h2>
-    <form id="eventForm">
-      <div class="field"><label>予定名</label><input name="title" required maxlength="32" placeholder="例：ディナー予約" /></div>
-      <div class="form-grid"><div class="field"><label>日付</label><input name="date" type="date" value="${todayKey()}" required /></div><div class="field"><label>時間</label><input name="time" type="time" value="19:00" required /></div></div>
-      <div class="field"><label>メモ</label><input name="note" maxlength="60" placeholder="場所や持ち物など" /></div>
-      <div class="field"><label>種類</label><select name="type"><option value="date">デート</option><option value="call">通話</option><option value="task">用事</option></select></div>
-      <div class="inline-actions"><button type="button" class="btn secondary" data-close>キャンセル</button><button class="btn" type="submit">予定に追加</button></div>
-    </form>`;
-}
-
-function todoModal() {
-  return `
-    <h2>ToDoを追加</h2>
-    <form id="todoForm">
-      <div class="field"><label>ToDo</label><input name="title" required maxlength="50" placeholder="例：旅行の計画を立てる" /></div>
-      <div class="inline-actions"><button type="button" class="btn secondary" data-close>キャンセル</button><button class="btn" type="submit">追加する</button></div>
-    </form>`;
-}
-
-function settingsModal() {
-  return `
-    <h2>プロフィール編集</h2>
-    <form id="settingsForm">
-      <div class="form-grid"><div class="field"><label>あなたの名前</label><input name="personA" value="${escapeHtml(state.profile.personA)}" required maxlength="20" /></div><div class="field"><label>パートナーの名前</label><input name="personB" value="${escapeHtml(state.profile.personB)}" required maxlength="20" /></div></div>
-      <div class="field"><label>交際開始日</label><input name="startDate" type="date" value="${escapeHtml(state.profile.startDate)}" required /></div>
-      <div class="field"><label>記念日の名前</label><input name="anniversaryName" value="${escapeHtml(state.profile.anniversaryName)}" maxlength="24" /></div>
-      <div class="field"><label>関係フェーズ</label><select name="phase">${["交際初期", "遠距離", "同棲", "新婚", "子育て前後", "関係改善"].map(v => option(v, state.profile.phase)).join("")}</select></div>
-      <div class="inline-actions"><button type="button" class="btn secondary" data-close>キャンセル</button><button class="btn" type="submit">更新する</button></div>
-    </form>`;
-}
-
-function bindEvents() {
-  document.querySelectorAll("[data-view]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.ui.view = btn.dataset.view; s.ui.modal = null; return s; }));
-  });
-
-  document.querySelectorAll("[data-modal]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.ui.modal = btn.dataset.modal; return s; }));
-  });
-
-  document.querySelectorAll("[data-close], [data-close-modal]").forEach(el => {
-    el.addEventListener("click", event => {
-      if (event.currentTarget.dataset.closeModal !== undefined && event.target.closest("[data-modal-panel]")) return;
-      setState(s => { s.ui.modal = null; return s; });
-    });
-  });
-
-  document.querySelectorAll("[data-mood]").forEach(select => {
-    select.addEventListener("change", () => setState(s => { s.moods[select.dataset.mood] = select.value; s.points += 5; return s; }));
-  });
-
-  document.querySelectorAll("[data-albumTab]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.ui.albumTab = btn.dataset.albumtab; return s; }));
-  });
-
-  document.querySelectorAll("[data-requestFilter]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.ui.requestFilter = btn.dataset.requestfilter; return s; }));
-  });
-
-  document.querySelectorAll("[data-request-status]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const [id, status] = btn.dataset.requestStatus.split(":");
-      setState(s => {
-        const req = s.requests.find(r => r.id === id);
-        if (req) {
-          const wasDone = req.status === "done";
-          req.status = status;
-          if (status === "done" && !wasDone) s.points += Number(req.reward || 0);
-        }
-        return s;
-      });
-    });
-  });
-
-  document.querySelectorAll("[data-delete-request]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.requests = s.requests.filter(r => r.id !== btn.dataset.deleteRequest); return s; }));
-  });
-
-  document.querySelectorAll("[data-delete-memory]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.memories = s.memories.filter(m => m.id !== btn.dataset.deleteMemory); return s; }));
-  });
-
-  document.querySelectorAll("[data-delete-event]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.events = s.events.filter(e => e.id !== btn.dataset.deleteEvent); return s; }));
-  });
-
-  document.querySelectorAll("[data-delete-todo]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => { s.todos = s.todos.filter(t => t.id !== btn.dataset.deleteTodo); return s; }));
-  });
-
-  document.querySelectorAll("[data-todo]").forEach(input => {
-    input.addEventListener("change", () => setState(s => { const todo = s.todos.find(t => t.id === input.dataset.todo); if (todo) todo.done = input.checked; if (input.checked) s.points += 10; return s; }));
-  });
-
-  document.querySelector("[data-toggle-location]")?.addEventListener("click", () => setState(s => {
-    s.privacy.locationSharing = !s.privacy.locationSharing;
-    s.privacy.shareHistory.unshift({ at: new Date().toISOString(), action: s.privacy.locationSharing ? "ON" : "OFF", mode: s.privacy.mode });
-    return s;
-  }));
-
-  document.querySelectorAll("[data-privacy-mode]").forEach(btn => {
-    btn.addEventListener("click", () => setState(s => {
-      s.privacy.mode = btn.dataset.privacyMode;
-      s.privacy.shareHistory.unshift({ at: new Date().toISOString(), action: "MODE_CHANGE", mode: s.privacy.mode });
-      return s;
-    }));
-  });
-
-  document.querySelectorAll("[data-action]").forEach(btn => {
-    btn.addEventListener("click", () => handlePrivacyAction(btn.dataset.action));
-  });
-
-  bindForms();
-}
-
-function bindForms() {
-  document.getElementById("onboardingForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    setState(s => {
-      s.profile.personA = String(fd.get("personA") || "").trim();
-      s.profile.personB = String(fd.get("personB") || "").trim();
-      s.profile.startDate = String(fd.get("startDate") || todayKey());
-      s.profile.anniversaryName = String(fd.get("anniversaryName") || "交際記念日").trim();
-      s.profile.phase = String(fd.get("phase") || "遠距離");
-      s.profile.isLongDistance = fd.get("isLongDistance") === "true";
-      s.profile.isReady = true;
-      return s;
-    });
-  });
-
-  document.getElementById("dailyForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    setState(s => {
-      s.daily.answerA = String(fd.get("answerA") || "").trim();
-      s.daily.answerB = String(fd.get("answerB") || "").trim();
-      s.daily.revealed = Boolean(s.daily.answerA || s.daily.answerB);
-      if (s.daily.revealed) s.points += 40;
-      s.ui.modal = null;
-      return s;
-    });
-  });
-
-  document.getElementById("memoryForm")?.addEventListener("submit", async event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    const file = fd.get("image");
-    const image = file && file.size ? await resizeImage(file, 720) : "";
-    setState(s => {
-      s.memories.unshift({
-        id: cryptoId(),
-        title: String(fd.get("title") || "思い出").trim(),
-        date: String(fd.get("date") || todayKey()),
-        place: String(fd.get("place") || "").trim(),
-        caption: String(fd.get("caption") || "").trim(),
-        emoji: String(fd.get("emoji") || "📷").trim(),
-        image
-      });
-      s.points += 30;
-      s.ui.modal = null;
-      return s;
-    });
-  });
-
-  document.getElementById("requestForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    setState(s => {
-      s.requests.unshift({
-        id: cryptoId(),
-        title: String(fd.get("title") || "お願い").trim(),
-        detail: String(fd.get("detail") || "").trim(),
-        from: String(fd.get("from") || "personA"),
-        status: "pending",
-        reward: Number(fd.get("reward") || 0),
-        createdAt: todayKey()
-      });
-      s.points += 10;
-      s.ui.modal = null;
-      return s;
-    });
-  });
-
-  document.getElementById("eventForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    setState(s => {
-      s.events.push({
-        id: cryptoId(),
-        title: String(fd.get("title") || "予定").trim(),
-        date: String(fd.get("date") || todayKey()),
-        time: String(fd.get("time") || "19:00"),
-        note: String(fd.get("note") || "").trim(),
-        type: String(fd.get("type") || "date")
-      });
-      s.points += 15;
-      s.ui.modal = null;
-      return s;
-    });
-  });
-
-  document.getElementById("todoForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    setState(s => {
-      s.todos.push({ id: cryptoId(), title: String(fd.get("title") || "ToDo").trim(), done: false });
-      s.points += 5;
-      s.ui.modal = null;
-      return s;
-    });
-  });
-
-  document.getElementById("settingsForm")?.addEventListener("submit", event => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    setState(s => {
-      s.profile.personA = String(fd.get("personA") || "").trim();
-      s.profile.personB = String(fd.get("personB") || "").trim();
-      s.profile.startDate = String(fd.get("startDate") || todayKey());
-      s.profile.anniversaryName = String(fd.get("anniversaryName") || "交際記念日").trim();
-      s.profile.phase = String(fd.get("phase") || "遠距離");
-      s.ui.modal = null;
-      return s;
-    });
-  });
-}
-
-function handlePrivacyAction(action) {
-  if (action === "export") {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `couplee-export-${todayKey()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    return;
+async function handleForm(e){
+  e.preventDefault(); const form=e.currentTarget; const fd=new FormData(form); const type=form.dataset.form;
+  if(type==='memory'){
+    let image=""; const file=fd.get('image'); if(file && file.size) image = await readFileAsDataUrl(file);
+    setState(s=>{ s.memories.unshift({id:cryptoId(),title:fd.get('title')||'新しい思い出',caption:fd.get('caption')||'',place:fd.get('place')||'',date:fd.get('date')||todayKey(),emoji:'📷',image,tags:[]}); s.points+=20; s.ui.modal=null; return s;}, '思い出を追加しました');
   }
-
-  if (action === "unlink") {
-    if (!confirm("パートナー連携を解除しますか？保存データは端末に残ります。")) return;
-    setState(s => {
-      s.profile.personB = "パートナー";
-      s.privacy.locationSharing = false;
-      s.privacy.shareHistory.unshift({ at: new Date().toISOString(), action: "UNLINK", mode: s.privacy.mode });
-      return s;
-    });
-    return;
-  }
-
-  if (action === "deleteAll") {
-    if (!confirm("全データを削除して初期状態に戻します。よろしいですか？")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    state = defaultState();
-    render();
-  }
+  if(type==='request') setState(s=>{s.requests.unshift({id:cryptoId(),title:fd.get('title')||'お願い',detail:fd.get('detail')||'',from:fd.get('from')||'personA',status:'pending',reward:Number(fd.get('reward')||30),category:'wish',createdAt:todayKey()}); s.ui.modal=null; return s;}, 'お願いを追加しました');
+  if(type==='event') setState(s=>{s.events.push({id:cryptoId(),title:fd.get('title')||'予定',date:fd.get('date')||todayKey(),time:fd.get('time')||'',note:fd.get('note')||'',type:fd.get('type')||'date'}); s.ui.selectedDate=fd.get('date')||todayKey(); s.ui.modal=null; return s;}, '予定を追加しました');
+  if(type==='todo') setState(s=>{s.todos.push({id:cryptoId(),title:fd.get('title')||'ToDo',owner:fd.get('owner')||'both',done:false}); s.ui.modal=null; return s;}, 'ToDoを追加しました');
+  if(type==='milestone') setState(s=>{s.milestones.push({id:cryptoId(),title:fd.get('title')||'新しい軌跡',date:fd.get('date')||todayKey(),emoji:fd.get('emoji')||'✨',note:fd.get('note')||''}); s.ui.modal=null; return s;}, '軌跡を追加しました');
 }
+function readFileAsDataUrl(file){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file); }); }
 
-function resizeImage(file, maxWidth) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const scale = Math.min(1, maxWidth / img.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.78));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
+function handleAction(action){
+  if(action==='revealDaily') return setState(s=>{s.daily.revealed=true; s.points+=40; s.companion.exp=Math.min(100,(s.companion.exp||0)+10); return s;}, '回答を開きました');
+  if(action==='nextQuestion') return setState(s=>{s.daily.questionIndex=(s.daily.questionIndex+1)%questions.length; s.daily.answerA=''; s.daily.answerB=''; s.daily.revealed=false; return s;}, '質問を変更しました');
+  if(action==='toggleLocation') return setState(s=>{s.privacy.locationSharing=!s.privacy.locationSharing; s.privacy.shareHistory.push({at:nowIso(),action:'位置情報共有',detail:s.privacy.locationSharing?'ON':'OFF'}); return s;}, '位置情報設定を更新しました');
+  if(action==='testReminder') return testNotification();
+  if(action==='exportData') return exportData();
+  if(action==='copyInvite') return copyInvite();
+  if(action==='unlinkPartner') return confirm('パートナー連携を解除しますか？データは端末内に残ります。') && setState(s=>{s.profile.personB='未連携'; s.privacy.locationSharing=false; s.privacy.shareHistory.push({at:nowIso(),action:'連携解除',detail:'パートナー表示を未連携に変更'}); return s;}, '連携を解除しました');
+  if(action==='wipeData') return confirm('全データを削除します。この操作は戻せません。') && (localStorage.removeItem(STORAGE_KEY), state=defaultState(), render('全データを削除しました'));
 }
-
-window.addEventListener("DOMContentLoaded", () => {
-  render();
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js").catch(() => {});
-  }
-});
+async function testNotification(){
+  if(!('Notification' in window)) return render('このブラウザは通知に対応していません');
+  let p = Notification.permission;
+  if(p === 'default') p = await Notification.requestPermission();
+  if(p === 'granted') { new Notification('Couplee 記念日リマインダー', { body: `${state.profile.anniversaryName}まであと${daysToAnniv()}日です。`, icon: '/assets/icon.svg' }); render('通知テストを送信しました'); }
+  else render('通知が許可されていません');
+}
+function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`couplee-data-${todayKey()}.json`; a.click(); URL.revokeObjectURL(url); render('データを書き出しました'); }
+async function copyInvite(){ const url = `${location.origin}?invite=${encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({ app:'Couplee', from:state.profile.personA, startDate:state.profile.startDate })))) )}`; try{ await navigator.clipboard.writeText(url); render('招待リンクをコピーしました'); }catch{ prompt('招待リンクをコピーしてください', url); } }
+function registerServiceWorker(){ if('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(()=>{}); }

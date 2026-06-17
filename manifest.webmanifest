@@ -3,7 +3,9 @@
   "short_name": "Couplee",
   "description": "記念日、アルバム、お願い掲示板、共有カレンダー、プライバシーを備えたカップルアプリ",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#fff7f8",
   "theme_color": "#ff6f91",
   "icons": [
