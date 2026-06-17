@@ -1,0 +1,12 @@
+{
+  "name": "Couplee - Couples OS",
+  "short_name": "Couplee",
+  "description": "記念日、アルバム、お願い掲示板、共有カレンダー、プライバシーを備えたカップルアプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff7f8",
+  "theme_color": "#ff6f91",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
