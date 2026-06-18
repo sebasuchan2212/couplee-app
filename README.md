@@ -1,128 +1,52 @@
-# Couplee v6 Supabase Sync
+# Couplee v6.2 Easy Link Sync
 
-Couplee v6は、Supabaseで相手と本当に同期できるカップルアプリ版です。
+相手が連携で離脱しないように、メール登録・招待コード手入力をなくした簡単連携版です。
 
-## v6でできること
+## 変更点
 
-- メールアドレスとパスワードでログイン
-- 自分のプロフィール作成
-- 名前設定
-- 画像アイコンアップロード
-- カップルルーム作成
-- 招待コード発行
-- 相手が招待コードで参加
-- 今日の質問を相手と共有
-- ふたりの回答を同期
-- 記念日カウントダウン
-- 関係フェーズ設定
-- アルバム同期
-- 写真付き思い出追加
-- お願い掲示板同期
-- 未対応 / 受付中 / 完了ステータス同期
-- 共有カレンダー同期
-- ToDo同期
-- プライバシー / GPS共有設定同期
-- データ書き出し
-- ログアウト
-- 連携解除
+- メール登録なしで開始できる匿名ログイン方式
+- 自分側は「名前・画像・パートナー名・記念日」だけでルーム作成
+- 作成後に招待リンクを自動生成
+- 相手側はリンクを開いて「名前・画像」だけで参加
+- 招待コードを手入力しない
+- カップルルーム作成はRPC化し、RLSや複数insertによるエラーを避ける
+- 今日の質問、アルバム、お願い掲示板、予定、ToDo、プライバシー設定を同期
 
-## 重要
+## 重要：Supabase設定
 
-コメットさん福井のSupabaseとは分けて、Couplee専用のSupabaseプロジェクトを作成してください。
+Supabaseで匿名ログインを有効化してください。
 
-推奨プロジェクト名：
+Authentication → Providers → Anonymous sign-ins → ON
 
-```text
-couplee-app-db
-```
+その後、SQL Editorで `supabase-schema.sql` を実行してください。
 
-## セットアップ手順
+## GitHubへアップロードするファイル
 
-### 1. Supabaseで新規プロジェクトを作成
+- index.html
+- styles.css
+- app.js
+- vercel.json
+- README.md
+- supabase-schema.sql
 
-Supabaseにログインし、新規プロジェクトを作成します。
+## 使い方
 
-### 2. SQL Editorでschemaを実行
+### 作成者側
 
-このZIPに入っている以下のファイルを開きます。
+1. アプリを開く
+2. 名前と画像を入れる
+3. パートナー名、交際開始日、関係フェーズを入れる
+4. 「ルームを作って招待リンクを出す」
+5. コピーされたリンクをLINEで送る
 
-```text
-supabase-schema.sql
-```
+### 相手側
 
-中身をすべてコピーして、SupabaseのSQL Editorで実行してください。
+1. 送られてきたリンクを開く
+2. 名前と画像を入れる
+3. 「名前だけで参加する」
 
-### 3. Authenticationの設定
+これだけで連携できます。
 
-SupabaseのAuthenticationで、Emailログインを有効にしてください。
+## 注意
 
-開発中は、確認メールが面倒な場合、Supabase側のAuth設定でメール確認をOFFにするとテストしやすいです。
-
-### 4. API情報を取得
-
-SupabaseのProject Settings → APIから以下をコピーします。
-
-```text
-Project URL
-anon public key
-```
-
-### 5. Vercel / GitHubにアップロード
-
-GitHubの `sebasuchan2212/couplee-app` に以下を上書きしてください。
-
-```text
-index.html
-styles.css
-app.js
-vercel.json
-README.md
-supabase-schema.sql
-```
-
-Vercelが自動デプロイします。
-
-### 6. アプリ画面でSupabase情報を入力
-
-初回表示で、Project URLとanon keyを入力してください。
-
-その後、メールアドレスとパスワードで登録・ログインします。
-
-## 相手と連携する流れ
-
-### 片方が作成する側
-
-1. アカウント登録
-2. プロフィール設定
-3. 「カップルルームを作成」
-4. 招待コードをコピー
-5. LINEなどで相手へ送る
-
-### 相手が参加する側
-
-1. 同じアプリURLを開く
-2. アカウント登録
-3. プロフィール設定
-4. 「相手の招待コードで参加」
-5. 招待コードを入力
-
-これで、お願い掲示板、アルバム、予定、ToDo、今日の質問が同期されます。
-
-## 注意点
-
-v6では画像アイコンとアルバム画像をBase64に圧縮してDBに保存しています。
-小規模テストでは簡単ですが、本番運用ではSupabase Storageに移行するのが理想です。
-
-## 次の改善候補
-
-- Supabase Storage対応
-- Web Push通知
-- 位置情報の実座標共有
-- 既読・未読
-- チャット
-- AI質問生成
-- Conflict Replay
-- Mental Load Ledger
-- 課金機能
-- 多言語化
-- E2EE / Field-level encryption
+匿名ログインは端末依存です。ブラウザのデータを消したり、別端末へ移動すると同じ匿名アカウントに戻れない可能性があります。本番運用では、あとからメールやGoogleログインを追加する設計がおすすめです。
