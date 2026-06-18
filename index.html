@@ -4,13 +4,29 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#ff6f91" />
+  <meta name="description" content="Couplee v6 - Supabaseで相手と同期できるカップル向けアプリ" />
   <title>Couplee v6 | Supabase Sync</title>
-  <meta name="description" content="Supabaseで相手と同期できるカップルアプリ Couplee v6" />
-  <link rel="stylesheet" href="styles.css?v=6.0.0" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="/styles.css?v=6.0.1" />
 </head>
 <body>
   <div id="app"></div>
-  <script src="app.js?v=6.0.0"></script>
+
+  <script>
+    window.COUPLEE_DEFAULT_SUPABASE = {
+      url: "https://bqmkxizjahrostybnmev.supabase.co",
+      anonKey: "sb_publishable_KDig6nCRocX9G58hmf8VuQ_Zd8ideRf"
+    };
+    try {
+      const key = "couplee_supabase_config_v6";
+      const current = JSON.parse(localStorage.getItem(key) || "null");
+      if (!current || !current.url || !current.anonKey) {
+        localStorage.setItem(key, JSON.stringify(window.COUPLEE_DEFAULT_SUPABASE));
+      }
+    } catch (error) {
+      console.warn("Couplee config initialization skipped", error);
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/app.js?v=6.0.1" defer></script>
 </body>
 </html>
