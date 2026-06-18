@@ -1,32 +1,32 @@
-# Couplee v5 - Screen Switch UI
+# Couplee v5.1 - Screen Switch UI
 
-Couplee v5 は、情報量を抑えて各画面を下部ナビで切り替える最新UI版です。
+画面切り替え式のカップルアプリUIです。
 
-## 主な改善
+## v5.1 修正内容
 
-- 6画面同時表示をやめ、1画面ずつ切り替える構成に変更
-- 初回入力画面を3ステップ化
-- 名前、記念日、関係フェーズをわかりやすく入力
-- あなたとパートナーのアイコンに画像アップロード対応
-- アップロード画像はホーム上部のアイコンに反映
-- 既存の機能は維持
-  - ホーム
-  - 記念日
-  - アルバム
-  - お願い掲示板
-  - 共有カレンダー
-  - プライバシー / GPS ON/OFF
+- 初回設定で入力した名前が確実に反映されるよう修正
+- 画像アップロード時に、入力済みの名前が消えないよう修正
+- 初回設定フォームの入力内容をリアルタイム保存
+- 端末の現在時刻をステータスバーに表示
+- 日付計算をブラウザのローカル日付基準に修正
 
-## Vercel設定
+## 主な機能
 
-- Framework Preset: Other
-- Build Command: 空欄
-- Output Directory: `.`
+- ホーム
+- 記念日
+- アルバム
+- お願い掲示板
+- 共有カレンダー
+- プライバシー/GPS設定
+- 名前・画像アイコン設定
+- localStorage保存
 
-## 構成
+## GitHub / Vercel反映方法
 
-- `index.html`: 1ファイル完結アプリ
-- `vercel.json`: キャッシュを残さない設定
-- `README.md`: 説明
+このZIPの中にある以下3ファイルをGitHubに上書きアップロードしてください。
 
-古い `app.js`、`styles.css`、`service-worker.js` が残っていても、この v5 は `index.html` だけで動きます。
+- index.html
+- vercel.json
+- README.md
+
+古い app.js / styles.css / service-worker.js は使用しません。
