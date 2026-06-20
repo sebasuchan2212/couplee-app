@@ -1,52 +1,34 @@
-# Couplee v6.2 Easy Link Sync
+# Couplee v6.3 Easy Link Inline版
 
-相手が連携で離脱しないように、メール登録・招待コード手入力をなくした簡単連携版です。
+## 目的
+
+Vercel側で `app.js` や `styles.css` が古いまま表示されたり、Deployment Protectionにより外部JS/CSSが読めない場合でも、画面が確実に変わるようにした1ファイル完結版です。
 
 ## 変更点
 
-- メール登録なしで開始できる匿名ログイン方式
-- 自分側は「名前・画像・パートナー名・記念日」だけでルーム作成
-- 作成後に招待リンクを自動生成
-- 相手側はリンクを開いて「名前・画像」だけで参加
-- 招待コードを手入力しない
-- カップルルーム作成はRPC化し、RLSや複数insertによるエラーを避ける
-- 今日の質問、アルバム、お願い掲示板、予定、ToDo、プライバシー設定を同期
+- `index.html` にCSSとアプリ本体JSを内蔵
+- `app.js` / `styles.css` の読み込み不要
+- Supabase接続情報を初期値として内蔵
+- `?reset=1` でCouplee/Supabase関連のローカル保存を初期化
+- v6.2の「リンクを開いて名前を入れるだけ」連携導線を維持
 
-## 重要：Supabase設定
+## アップロードするファイル
 
-Supabaseで匿名ログインを有効化してください。
-
-Authentication → Providers → Anonymous sign-ins → ON
-
-その後、SQL Editorで `supabase-schema.sql` を実行してください。
-
-## GitHubへアップロードするファイル
+GitHubに以下を上書きしてください。
 
 - index.html
-- styles.css
-- app.js
 - vercel.json
 - README.md
 - supabase-schema.sql
 
-## 使い方
+既存の `app.js` と `styles.css` が残っていても、この版では使用しません。
 
-### 作成者側
+## 確認URL
 
-1. アプリを開く
-2. 名前と画像を入れる
-3. パートナー名、交際開始日、関係フェーズを入れる
-4. 「ルームを作って招待リンクを出す」
-5. コピーされたリンクをLINEで送る
+通常:
 
-### 相手側
+`https://couplee-app-git-main-sebasuchan0402-4737s-projects.vercel.app/`
 
-1. 送られてきたリンクを開く
-2. 名前と画像を入れる
-3. 「名前だけで参加する」
+古い表示が残る場合:
 
-これだけで連携できます。
-
-## 注意
-
-匿名ログインは端末依存です。ブラウザのデータを消したり、別端末へ移動すると同じ匿名アカウントに戻れない可能性があります。本番運用では、あとからメールやGoogleログインを追加する設計がおすすめです。
+`https://couplee-app-git-main-sebasuchan0402-4737s-projects.vercel.app/?reset=1`
